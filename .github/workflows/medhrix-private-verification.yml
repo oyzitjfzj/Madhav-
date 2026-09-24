@@ -57,7 +57,7 @@ jobs:
             echo "Tests: FAIL"
             exit 1
           fi
-          if cargo +1.75.0 fmt --all -- --check >"$RUNNER_TEMP/medhrix-format.log" "$RUNNER_TEMP/medhrix-format-diagnostic.log" 2>&1; then
+          if cargo +1.75.0 fmt --all -- --check >"$RUNNER_TEMP/medhrix-format.log" 2>&1; then
             echo "Formatting: PASS"
           else
             echo "Formatting: FAIL"
@@ -79,4 +79,4 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -rf -- source "$RUNNER_TEMP/rust-setup.log" "$RUNNER_TEMP/medhrix-tests.log" "$RUNNER_TEMP/medhrix-format.log"
+          rm -rf -- source "$RUNNER_TEMP/rust-setup.log" "$RUNNER_TEMP/medhrix-tests.log" "$RUNNER_TEMP/medhrix-format.log" "$RUNNER_TEMP/medhrix-format-diagnostic.log"
