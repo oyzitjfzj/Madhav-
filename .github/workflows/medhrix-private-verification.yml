@@ -57,10 +57,21 @@ jobs:
             echo "Tests: FAIL"
             exit 1
           fi
-          if cargo +1.75.0 fmt --all -- --check >"$RUNNER_TEMP/medhrix-format.log" 2>&1; then
+          if cargo +1.75.0 fmt --all -- --check >"$RUNNER_TEMP/medhrix-format.log" "$RUNNER_TEMP/medhrix-format-diagnostic.log" 2>&1; then
             echo "Formatting: PASS"
           else
             echo "Formatting: FAIL"
+            if cargo +1.75.0 fmt --all >"$RUNNER_TEMP/medhrix-format-diagnostic.log" 2>&1; then
+              mapfile -t tracked < <(git ls-files '*.rs' | LC_ALL=C sort)
+              mapfile -t changed < <(git diff --name-only -- '*.rs' | LC_ALL=C sort)
+              for i in "${!tracked[@]}"; do
+                for candidate in "${changed[@]}"; do
+                  if [[ "${tracked[$i]}" == "$candidate" ]]; then
+                    printf 'Formatting file index: %d\n' "$((i + 1))"
+                  fi
+                done
+              done
+            fi
             exit 1
           fi
 
