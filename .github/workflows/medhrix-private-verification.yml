@@ -71,6 +71,11 @@ jobs:
                   fi
                 done
               done
+              git diff --unified=0 -- '*.rs' | awk '/^@@ / {
+                split($2, range, ",")
+                sub(/^-/, "", range[1])
+                printf "Formatting line: %d\\n", range[1]
+              }'
             fi
             exit 1
           fi
