@@ -107,7 +107,8 @@ jobs:
             exit 1
           fi
 
-      - name: Remove temporary checkout and diagnostics
+      - name: Remove temporary diagnostics
         if: always()
         shell: bash
         run: |
+          rm -f -- "$RUNNER_TEMP/rust-setup.log" "$RUNNER_TEMP/medhrix-tests.log" "$RUNNER_TEMP/medhrix-format.log" "$RUNNER_TEMP/medhrix-format-diagnostic.log"
