@@ -54,7 +54,7 @@ jobs:
         working-directory: source
         shell: bash
         run: |
-          if cargo +1.75.0 test --all-targets --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
+          if timeout 180s cargo +1.75.0 test --all-targets --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
             echo "Core tests: PASS"
           else
             echo "Core tests: FAIL"
@@ -69,7 +69,7 @@ jobs:
             done < <(sed -nE 's/^[[:space:]]*--> ([^:]+:[0-9]+:[0-9]+).*$/\1/p' "$RUNNER_TEMP/medhrix-tests.log")
             exit 1
           fi
-          if cargo +1.75.0 test --all-targets --features std --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
+          if timeout 180s cargo +1.75.0 test --all-targets --features std --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
             echo "Std tests: PASS"
           else
             echo "Std tests: FAIL"
