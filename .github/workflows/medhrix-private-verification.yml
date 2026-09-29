@@ -54,10 +54,10 @@ jobs:
         working-directory: source
         shell: bash
         run: |
-          if cargo +1.75.0 test --all-targets --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1 && cargo +1.75.0 test --all-targets --features std --locked >>"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
-            echo "Tests: PASS"
+          if cargo +1.75.0 test --all-targets --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
+            echo "Core tests: PASS"
           else
-            echo "Tests: FAIL"
+            echo "Core tests: FAIL"
             sed -nE 's/^error(\[[A-Z][0-9]+\]):.*/Compiler code: \1/p' "$RUNNER_TEMP/medhrix-tests.log" | LC_ALL=C sort -u
             mapfile -t tracked < <(git ls-files '*.rs' | LC_ALL=C sort)
             while IFS=: read -r file line column; do
@@ -67,6 +67,21 @@ jobs:
                 fi
               done
             done < <(sed -nE 's/^[[:space:]]*--> ([^:]+:[0-9]+:[0-9]+).*$/\1/p' "$RUNNER_TEMP/medhrix-tests.log")
+            exit 1
+          fi
+          if cargo +1.75.0 test --all-targets --features std --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
+            echo "Std tests: PASS"
+          else
+            echo "Std tests: FAIL"
+            sed -nE 's/^error(\\[[A-Z][0-9]+\\]):.*/Compiler code: \\1/p' "$RUNNER_TEMP/medhrix-tests.log" | LC_ALL=C sort -u
+            mapfile -t tracked < <(git ls-files '*.rs' | LC_ALL=C sort)
+            while IFS=: read -r file line column; do
+              for i in "${!tracked[@]}"; do
+                if [[ "${tracked[$i]}" == "$file" ]]; then
+                  printf 'Compiler location: %d:%d\\n' "$((i + 1))" "$line"
+                fi
+              done
+            done < <(sed -nE 's/^[[:space:]]*--> ([^:]+:[0-9]+:[0-9]+).*$/\\1/p' "$RUNNER_TEMP/medhrix-tests.log")
             exit 1
           fi
           if cargo +1.75.0 fmt --all -- --check >"$RUNNER_TEMP/medhrix-format.log" 2>&1; then
