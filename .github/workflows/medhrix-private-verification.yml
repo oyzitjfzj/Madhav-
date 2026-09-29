@@ -54,7 +54,7 @@ jobs:
         working-directory: source
         shell: bash
         run: |
-          if cargo +1.75.0 test --all-targets --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
+          if cargo +1.75.0 test --all-targets --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1 && cargo +1.75.0 test --all-targets --features std --locked >>"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
             echo "Tests: PASS"
           else
             echo "Tests: FAIL"
