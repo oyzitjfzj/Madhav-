@@ -50,6 +50,16 @@ jobs:
             exit 1
           fi
 
+      - name: Install portable check targets
+        shell: bash
+        run: |
+          if rustup target add --toolchain 1.75.0 x86_64-pc-windows-gnu aarch64-linux-android i686-unknown-linux-gnu >"$RUNNER_TEMP/medhrix-targets.log" 2>&1; then
+            echo "Portable targets: PASS"
+          else
+            echo "Portable targets: FAIL"
+            exit 1
+          fi
+
       - name: Run tests and formatting without publishing source output
         working-directory: source
         shell: bash
@@ -84,6 +94,15 @@ jobs:
             done < <(sed -nE 's/^[[:space:]]*--> ([^:]+:[0-9]+:[0-9]+).*$/\1/p' "$RUNNER_TEMP/medhrix-tests.log")
             exit 1
           fi
+          for target in x86_64-pc-windows-gnu aarch64-linux-android i686-unknown-linux-gnu; do
+            if timeout 180s cargo +1.75.0 check --locked --features std --bin medhrix-store --target "$target" >"$RUNNER_TEMP/medhrix-portable.log" 2>&1; then
+              echo "Portable check $target: PASS"
+            else
+              echo "Portable check $target: FAIL"
+              sed -nE 's/^error(\[[A-Z][0-9]+\]):.*/Compiler code: \1/p' "$RUNNER_TEMP/medhrix-portable.log" | LC_ALL=C sort -u
+              exit 1
+            fi
+          done
           if cargo +1.75.0 fmt --all -- --check >"$RUNNER_TEMP/medhrix-format.log" 2>&1; then
             echo "Formatting: PASS"
           else
@@ -111,4 +130,4 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f -- "$RUNNER_TEMP/rust-setup.log" "$RUNNER_TEMP/medhrix-tests.log" "$RUNNER_TEMP/medhrix-format.log" "$RUNNER_TEMP/medhrix-format-diagnostic.log"
+          rm -f -- "$RUNNER_TEMP/rust-setup.log" "$RUNNER_TEMP/medhrix-tests.log" "$RUNNER_TEMP/medhrix-format.log" "$RUNNER_TEMP/medhrix-format-diagnostic.log" "$RUNNER_TEMP/medhrix-targets.log" "$RUNNER_TEMP/medhrix-portable.log"
