@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      EXPECTED_COMMIT: ce8b0d3b2d3b8358f7fd4e15b8b557d2c097ee4a
+      EXPECTED_COMMIT: ac67aa05883c2173d2e02c34f94a3f646f4ba93f
     steps:
       - name: Check private access configuration
         env:
@@ -92,7 +92,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if rm -rf -- "$GITHUB_WORKSPACE/source" "$RUNNER_TEMP"/medhrix-*.log >/dev/null 2>&1; then
+          if rm -rf -- "$GITHUB_WORKSPACE/source" "$RUNNER_TEMP"/medhrix-*.log "$RUNNER_TEMP"/medhrix-checks.* >/dev/null 2>&1; then
             echo 'Temporary checkout cleanup: PASS'
           else
             echo 'Temporary checkout cleanup: FAIL'
