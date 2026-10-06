@@ -74,31 +74,7 @@ jobs:
           fi
           status=0
           timeout --kill-after=10s 1000s bash .ci/verify.sh >"$driver_log" 2>&1 || status="$?"
-          grep -E '^(CHECK [0-9]+ (PASS|FAIL)|COMPILER_CODE E[0-9]{4}|LOCATION [0-9]+ [0-9]+|FORMAT [0-9]+ [0-9]+ [0-9]+ [0-9,]+|FORMAT_UNSUPPORTED [0-9]+|TEST_COUNTS [0-9]+ [0-9]+ [0-9]+ [0-9]+|ACCEPTANCE PASS 21) "$driver_log" || true
-          if [[ "$status" != 0 ]] || ! grep -Fxq 'ACCEPTANCE PASS 21' "$driver_log"; then
-            echo 'Complete acceptance: FAIL'
-            exit 1
-          fi
-          for number in $(seq 1 21); do
-            if ! grep -Fxq "CHECK $number PASS" "$driver_log"; then
-              echo 'Complete acceptance: FAIL'
-              exit 1
-            fi
-          done
-          echo 'Complete acceptance: PASS'
-          printf 'Acceptance: 21 checks PASS\n' >>"$GITHUB_STEP_SUMMARY"
-
-      - name: Remove private source and temporary diagnostics
-        if: always()
-        shell: bash
-        run: |
-          if rm -rf -- "$GITHUB_WORKSPACE/source" "$RUNNER_TEMP"/medhrix-*.log >/dev/null 2>&1; then
-            echo 'Temporary checkout cleanup: PASS'
-          else
-            echo 'Temporary checkout cleanup: FAIL'
-            exit 1
-          fi
- "$driver_log" || true
+          grep -E '^(CHECK [0-9]+ (PASS|FAIL)|COMPILER_CODE E[0-9]{4}|LOCATION [0-9]+ [0-9]+|FORMAT [0-9]+ [0-9]+ [0-9]+ [0-9,]+|FORMAT_UNSUPPORTED [0-9]+|TEST_COUNTS [0-9]+ [0-9]+ [0-9]+ [0-9]+|ACCEPTANCE PASS 21)$' "$driver_log" || true
           if [[ "$status" != 0 ]] || ! grep -Fxq 'ACCEPTANCE PASS 21' "$driver_log"; then
             echo 'Complete acceptance: FAIL'
             exit 1
