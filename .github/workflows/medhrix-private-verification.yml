@@ -1,95 +1,100 @@
 name: MEDHRIX private verification
-
 on:
   workflow_dispatch:
-
+  pull_request:
+    branches: [main]
 permissions:
   contents: read
-
 concurrency:
   group: medhrix-private-verification
   cancel-in-progress: true
-
 jobs:
   verify:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'verification/medhrix-20261008')
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
+    env:
+      EXPECTED_COMMIT: dea0ccd7c41c6541b6318542cf6c466e2254707f
     steps:
-      - name: Check access configuration
+      - name: Check private access configuration
         env:
           PRIVATE_READ_TOKEN: ${{ secrets.MEDHRIX_PRIVATE_READ_TOKEN }}
           PRIVATE_REPOSITORY: ${{ secrets.MEDHRIX_PRIVATE_REPOSITORY }}
         shell: bash
         run: |
-          if [[ -z "$PRIVATE_READ_TOKEN" || -z "$PRIVATE_REPOSITORY" ]]; then
-            echo "Verification credentials are missing."
+          if [[ -z "$PRIVATE_READ_TOKEN" || "$PRIVATE_REPOSITORY" != 'oyzitjfzj/MEDHRIX' ]]; then
+            echo 'Access configuration: FAIL'
             exit 1
           fi
+          echo 'Access configuration: PASS'
 
-      - name: Read the private working branch
-        uses: actions/checkout@v4
+      - name: Read the exact private commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ${{ secrets.MEDHRIX_PRIVATE_REPOSITORY }}
-          ref: work/medhrix-body
+          ref: ${{ env.EXPECTED_COMMIT }}
           token: ${{ secrets.MEDHRIX_PRIVATE_READ_TOKEN }}
           path: source
           persist-credentials: false
           fetch-depth: 1
           show-progress: false
 
-      - name: Install project Rust toolchain
+      - name: Check immutable checkout identity
         shell: bash
         run: |
-          if rustup toolchain install 1.75.0 --profile minimal --component rustfmt >"$RUNNER_TEMP/rust-setup.log" 2>&1; then
-            echo "Rust toolchain: PASS"
-          else
-            echo "Rust toolchain: FAIL"
+          actual="$(git -C source rev-parse HEAD 2>/dev/null)"
+          if [[ "$actual" != "$EXPECTED_COMMIT" ]]; then
+            echo 'Private commit identity: FAIL'
             exit 1
           fi
+          echo 'Private commit identity: PASS'
+          printf 'Private commit: %s\n' "$EXPECTED_COMMIT" >>"$GITHUB_STEP_SUMMARY"
 
-      - name: Run tests and formatting without publishing source output
+      - name: Install declared toolchain and portable targets
+        shell: bash
+        run: |
+          if ! rustup toolchain install 1.75.0 --profile minimal --component rustfmt >"$RUNNER_TEMP/medhrix-setup.log" 2>&1; then
+            echo 'Toolchain setup: FAIL'
+            exit 1
+          fi
+          if ! rustup target add --toolchain 1.75.0 x86_64-pc-windows-gnu aarch64-linux-android i686-unknown-linux-gnu >"$RUNNER_TEMP/medhrix-targets.log" 2>&1; then
+            echo 'Portable target setup: FAIL'
+            exit 1
+          fi
+          echo 'Toolchain and portable targets: PASS'
+
+      - name: Run complete private acceptance matrix
         working-directory: source
         shell: bash
         run: |
-          if cargo +1.75.0 test --all-targets --locked >"$RUNNER_TEMP/medhrix-tests.log" 2>&1; then
-            echo "Tests: PASS"
-          else
-            echo "Tests: FAIL"
-            sed -nE 's/^error(\[[A-Z][0-9]+\]):.*/Compiler code: \1/p' "$RUNNER_TEMP/medhrix-tests.log" | LC_ALL=C sort -u
-            mapfile -t tracked < <(git ls-files '*.rs' | LC_ALL=C sort)
-            while IFS=: read -r file line column; do
-              for i in "${!tracked[@]}"; do
-                if [[ "${tracked[$i]}" == "$file" ]]; then
-                  printf 'Compiler location: %d:%d\n' "$((i + 1))" "$line"
-                fi
-              done
-            done < <(sed -nE 's/^[[:space:]]*--> ([^:]+:[0-9]+:[0-9]+).*$/\1/p' "$RUNNER_TEMP/medhrix-tests.log")
+          driver_log="$RUNNER_TEMP/medhrix-driver.log"
+          if ! bash -n .ci/verify.sh >"$driver_log" 2>&1; then
+            echo 'Private acceptance syntax: FAIL'
             exit 1
           fi
-          if cargo +1.75.0 fmt --all -- --check >"$RUNNER_TEMP/medhrix-format.log" 2>&1; then
-            echo "Formatting: PASS"
-          else
-            echo "Formatting: FAIL"
-            if cargo +1.75.0 fmt --all >"$RUNNER_TEMP/medhrix-format-diagnostic.log" 2>&1; then
-              mapfile -t tracked < <(git ls-files '*.rs' | LC_ALL=C sort)
-              mapfile -t changed < <(git diff --name-only -- '*.rs' | LC_ALL=C sort)
-              for i in "${!tracked[@]}"; do
-                for candidate in "${changed[@]}"; do
-                  if [[ "${tracked[$i]}" == "$candidate" ]]; then
-                    printf 'Formatting file index: %d\n' "$((i + 1))"
-                  fi
-                done
-              done
-              git diff --unified=0 -- '*.rs' | awk '/^@@ / {
-                split($2, range, ",")
-                sub(/^-/, "", range[1])
-                printf "Formatting line: %d\n", range[1]
-              }'
+          status=0
+          timeout --kill-after=10s 1000s bash .ci/verify.sh >"$driver_log" 2>&1 || status="$?"
+          grep -E '^(CHECK [0-9]+ (PASS|FAIL)|COMPILER_CODE E[0-9]{4}|LOCATION [0-9]+ [0-9]+|FORMAT [0-9]+ [0-9]+ [0-9]+ [0-9,]+|FORMAT_UNSUPPORTED [0-9]+|TEST_COUNTS [0-9]+ [0-9]+ [0-9]+ [0-9]+|ACCEPTANCE PASS 35)$' "$driver_log" || true
+          if [[ "$status" != 0 ]] || ! grep -Fxq 'ACCEPTANCE PASS 35' "$driver_log"; then
+            echo 'Complete acceptance: FAIL'
+            exit 1
+          fi
+          for number in $(seq 1 35); do
+            if ! grep -Fxq "CHECK $number PASS" "$driver_log"; then
+              echo 'Complete acceptance: FAIL'
+              exit 1
             fi
-            exit 1
-          fi
+          done
+          echo 'Complete acceptance: PASS'
+          printf 'Acceptance: 35 checks PASS\n' >>"$GITHUB_STEP_SUMMARY"
 
-      - name: Remove temporary checkout and diagnostics
+      - name: Remove private source and temporary diagnostics
         if: always()
         shell: bash
         run: |
+          if rm -rf -- "$GITHUB_WORKSPACE/source" "$RUNNER_TEMP"/medhrix-*.log "$RUNNER_TEMP"/medhrix-checks.* >/dev/null 2>&1; then
+            echo 'Temporary checkout cleanup: PASS'
+          else
+            echo 'Temporary checkout cleanup: FAIL'
+            exit 1
+          fi
