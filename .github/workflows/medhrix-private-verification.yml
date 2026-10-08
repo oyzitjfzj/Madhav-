@@ -10,11 +10,11 @@ concurrency:
   cancel-in-progress: true
 jobs:
   verify:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'verification/medhrix-20261008')
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'verification/medhrix-skill-host-20261008')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      EXPECTED_COMMIT: dea0ccd7c41c6541b6318542cf6c466e2254707f
+      EXPECTED_COMMIT: 2cd74ebf921d1d06a8616d8e6cabe004a2f58c99
     steps:
       - name: Check private access configuration
         env:
@@ -74,19 +74,19 @@ jobs:
           fi
           status=0
           timeout --kill-after=10s 1000s bash .ci/verify.sh >"$driver_log" 2>&1 || status="$?"
-          grep -E '^(CHECK [0-9]+ (PASS|FAIL)|COMPILER_CODE E[0-9]{4}|LOCATION [0-9]+ [0-9]+|FORMAT [0-9]+ [0-9]+ [0-9]+ [0-9,]+|FORMAT_UNSUPPORTED [0-9]+|TEST_COUNTS [0-9]+ [0-9]+ [0-9]+ [0-9]+|ACCEPTANCE PASS 35)$' "$driver_log" || true
-          if [[ "$status" != 0 ]] || ! grep -Fxq 'ACCEPTANCE PASS 35' "$driver_log"; then
+          grep -E '^(CHECK [0-9]+ (PASS|FAIL)|COMPILER_CODE E[0-9]{4}|LOCATION [0-9]+ [0-9]+|FORMAT [0-9]+ [0-9]+ [0-9]+ [0-9,]+|FORMAT_UNSUPPORTED [0-9]+|TEST_COUNTS [0-9]+ [0-9]+ [0-9]+ [0-9]+|ACCEPTANCE PASS 37)$' "$driver_log" || true
+          if [[ "$status" != 0 ]] || ! grep -Fxq 'ACCEPTANCE PASS 37' "$driver_log"; then
             echo 'Complete acceptance: FAIL'
             exit 1
           fi
-          for number in $(seq 1 35); do
+          for number in $(seq 1 37); do
             if ! grep -Fxq "CHECK $number PASS" "$driver_log"; then
               echo 'Complete acceptance: FAIL'
               exit 1
             fi
           done
           echo 'Complete acceptance: PASS'
-          printf 'Acceptance: 35 checks PASS\n' >>"$GITHUB_STEP_SUMMARY"
+          printf 'Acceptance: 37 checks PASS\n' >>"$GITHUB_STEP_SUMMARY"
 
       - name: Remove private source and temporary diagnostics
         if: always()
