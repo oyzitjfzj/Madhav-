@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      EXPECTED_COMMIT: a78a86b0fc984393aba97663fd4952051051e484
+      EXPECTED_COMMIT: 801b904bbcd5b926a57c1dd01fa74293437bb9e0
     steps:
       - name: Check private access configuration
         env:
@@ -74,19 +74,19 @@ jobs:
           fi
           status=0
           timeout --kill-after=10s 1000s bash .ci/verify.sh >"$driver_log" 2>&1 || status="$?"
-          grep -E '^(CHECK [0-9]+ (PASS|FAIL)|COMPILER_CODE E[0-9]{4}|LOCATION [0-9]+ [0-9]+|FORMAT [0-9]+ [0-9]+ [0-9]+ [0-9,]+|FORMAT_UNSUPPORTED [0-9]+|TEST_COUNTS [0-9]+ [0-9]+ [0-9]+ [0-9]+|ACCEPTANCE PASS 45)$' "$driver_log" || true
-          if [[ "$status" != 0 ]] || ! grep -Fxq 'ACCEPTANCE PASS 45' "$driver_log"; then
+          grep -E '^(CHECK [0-9]+ (PASS|FAIL)|COMPILER_CODE E[0-9]{4}|LOCATION [0-9]+ [0-9]+|FORMAT [0-9]+ [0-9]+ [0-9]+ [0-9,]+|FORMAT_UNSUPPORTED [0-9]+|TEST_COUNTS [0-9]+ [0-9]+ [0-9]+ [0-9]+|ACCEPTANCE PASS 49)$' "$driver_log" || true
+          if [[ "$status" != 0 ]] || ! grep -Fxq 'ACCEPTANCE PASS 49' "$driver_log"; then
             echo 'Complete acceptance: FAIL'
             exit 1
           fi
-          for number in $(seq 1 45); do
+          for number in $(seq 1 49); do
             if ! grep -Fxq "CHECK $number PASS" "$driver_log"; then
               echo 'Complete acceptance: FAIL'
               exit 1
             fi
           done
           echo 'Complete acceptance: PASS'
-          printf 'Acceptance: 45 checks PASS\n' >>"$GITHUB_STEP_SUMMARY"
+          printf 'Acceptance: 49 checks PASS\n' >>"$GITHUB_STEP_SUMMARY"
 
       - name: Remove private source and temporary diagnostics
         if: always()
