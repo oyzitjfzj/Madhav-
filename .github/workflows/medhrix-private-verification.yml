@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      EXPECTED_COMMIT: 10bc5ba6277b89629f36a76f2aee405d16cdc2b0
+      EXPECTED_COMMIT: 58a117b9c0a5d882a9b633eae5562caa48b64686
     steps:
       - name: Check private access configuration
         env:
